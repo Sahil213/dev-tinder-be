@@ -3,16 +3,45 @@ const connectDB = require("./config/database");
 const app = express();
 const port = 3000;
 const User = require("./models/user");
+const validateSignUpData = require("./utils/validation");
+const bcrypt = require("bcrypt");
 
 app.use(express.json());
 app.post("/signup", async (req, res) => {
-  // Craete a new user instance
-  console.log(req.body);
-  const user = new User(req.body);
-
   try {
+    // Validation of data
+    validateSignUpData(req);
+
+    const { firstName, lastName, email, password } = req.body;
+    // Encrypt the password
+    const passworHash = await bcrypt.hash(password, 10);
+    // Craete a new user instance
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password: passworHash,
+    });
+
     await user.save();
     res.send("User Created");
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new Error("Invalid password");
+    }
+    res.send("Logged in");
   } catch (err) {
     res.status(400).send(err.message);
   }
@@ -44,7 +73,7 @@ app.patch("/update/:id", async (req, res) => {
   try {
     console.log(req.params);
 
-    const ALLOWED_UPDATES = ["firstname", "lastname", "password"];
+    const ALLOWED_UPDATES = ["firstName", "lastName", "password"];
     const updates = Object.keys(req.body);
     const isValidOperation = updates.every((update) =>
       ALLOWED_UPDATES.includes(update)
