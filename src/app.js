@@ -40,18 +40,32 @@ app.delete("/delete/:id", async (req, res) => {
   }
 });
 
-app.patch("/update/:id", async (req, res) => {  
+app.patch("/update/:id", async (req, res) => {
   try {
     console.log(req.params);
-    const user = await User.findByIdAndUpdate(req.params.id
-    , req.body, {new: true, runValidators: true});    
+
+    const ALLOWED_UPDATES = ["firstname", "lastname", "password"];
+    const updates = Object.keys(req.body);
+    const isValidOperation = updates.every((update) =>
+      ALLOWED_UPDATES.includes(update)
+    );
+    if (!isValidOperation) {
+      return res.status(400).send({ error: "Invalid updates!" });
+    }
+    if (data?.skills.length > 10) {
+      throw new Error("Skills can not be more than 10");
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
     if (!user) {
       return res.status(404).send("User not found");
-    } 
+    }
     res.send(user);
   } catch (err) {
     res.status(500).send(err.message);
-  }   
+  }
 });
 
 connectDB()
@@ -64,5 +78,3 @@ connectDB()
   .catch((err) => {
     console.log("Error connecting to MongoDB", err);
   });
-
-  
