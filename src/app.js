@@ -27,6 +27,33 @@ app.get("/feed", async (req, res) => {
   }
 });
 
+app.delete("/delete/:id", async (req, res) => {
+  try {
+    console.log(req.params);
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    res.send(user);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+app.patch("/update/:id", async (req, res) => {  
+  try {
+    console.log(req.params);
+    const user = await User.findByIdAndUpdate(req.params.id
+    , req.body, {new: true, runValidators: true});    
+    if (!user) {
+      return res.status(404).send("User not found");
+    } 
+    res.send(user);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }   
+});
+
 connectDB()
   .then(() => {
     console.log("Connected to MongoDB");
@@ -37,3 +64,5 @@ connectDB()
   .catch((err) => {
     console.log("Error connecting to MongoDB", err);
   });
+
+  
