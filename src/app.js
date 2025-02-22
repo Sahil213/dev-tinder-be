@@ -5,8 +5,12 @@ const port = 3000;
 const User = require("./models/user");
 const validateSignUpData = require("./utils/validation");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const { userAuth } = require("./middlewares/auth");
 
+app.use(cookieParser());
 app.use(express.json());
+
 app.post("/signup", async (req, res) => {
   try {
     // Validation of data
@@ -37,11 +41,30 @@ app.post("/login", async (req, res) => {
     if (!user) {
       throw new Error("User not found");
     }
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await user.validatePassword(password);
     if (!isMatch) {
-      throw new Error("Invalid password");
+      // Create  A Jwt TOKEN
+      const token = await user.getJWT();
+      // Add the JWT token to the response header
+      res.cookie("token", token);
+      res.send("Logged in");
     }
-    res.send("Logged in");
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    res.send(req.user);
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
   } catch (err) {
     res.status(400).send(err.message);
   }
