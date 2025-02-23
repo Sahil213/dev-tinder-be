@@ -2,123 +2,20 @@ const express = require("express");
 const connectDB = require("./config/database");
 const app = express();
 const port = 3000;
-const User = require("./models/user");
-const validateSignUpData = require("./utils/validation");
-const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
-const { userAuth } = require("./middlewares/auth");
 
 app.use(cookieParser());
 app.use(express.json());
 
-app.post("/signup", async (req, res) => {
-  try {
-    // Validation of data
-    validateSignUpData(req);
+const authRouter = require("./routes/auth");
+const profileRouter = require("./routes/profile");
+const requestRouter = require("./routes/requests");
+const userRouter = require("./routes/user");
 
-    const { firstName, lastName, email, password } = req.body;
-    // Encrypt the password
-    const passworHash = await bcrypt.hash(password, 10);
-    // Craete a new user instance
-    const user = new User({
-      firstName,
-      lastName,
-      email,
-      password: passworHash,
-    });
-
-    await user.save();
-    res.send("User Created");
-  } catch (err) {
-    res.status(400).send(err.message);
-  }
-});
-
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) {
-      throw new Error("User not found");
-    }
-    const isMatch = await user.validatePassword(password);
-    if (!isMatch) {
-      // Create  A Jwt TOKEN
-      const token = await user.getJWT();
-      // Add the JWT token to the response header
-      res.cookie("token", token);
-      res.send("Logged in");
-    }
-  } catch (err) {
-    res.status(400).send(err.message);
-  }
-});
-
-app.get("/profile", userAuth, async (req, res) => {
-  try {
-    res.send(req.user);
-  } catch (err) {
-    res.status(400).send(err.message);
-  }
-});
-
-app.post("/sendConnectionRequest", userAuth, async (req, res) => {
-  try {
-    const user = req.user;
-  } catch (err) {
-    res.status(400).send(err.message);
-  }
-});
-// Find API - GEt/ feed - get all the users from the database
-app.get("/feed", async (req, res) => {
-  try {
-    const users = await User.find();
-    res.send(users);
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
-
-app.delete("/delete/:id", async (req, res) => {
-  try {
-    console.log(req.params);
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
-    res.send(user);
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
-
-app.patch("/update/:id", async (req, res) => {
-  try {
-    console.log(req.params);
-
-    const ALLOWED_UPDATES = ["firstName", "lastName", "password"];
-    const updates = Object.keys(req.body);
-    const isValidOperation = updates.every((update) =>
-      ALLOWED_UPDATES.includes(update)
-    );
-    if (!isValidOperation) {
-      return res.status(400).send({ error: "Invalid updates!" });
-    }
-    if (data?.skills.length > 10) {
-      throw new Error("Skills can not be more than 10");
-    }
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
-    res.send(user);
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
+app.use("/", authRouter);
+app.use("/", profileRouter);
+app.use("/", requestRouter);
+app.use("/", userRouter);
 
 connectDB()
   .then(() => {
